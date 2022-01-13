@@ -1,8 +1,8 @@
-from ..status import StatusDict,statedict2dict,dict2statedict,getNorm
+from status import StatusDict,ELExceptionRaise,dict2statedict
 from itertools import chain
-from ..utils import *
+from utils import *
 
-class Composer:
+class InputComposer:
     def __init__(self,*inputMaker):
         self.nameSet = None
         try:
@@ -35,24 +35,40 @@ class Composer:
 class InputMaker:
     INFINITE=0
     FINITE=1
-    def __init__(self,nameSet,lenth=None):
+    def __init__(self,nameSet,initState=None,lenth=None,tracer=None):
         if not lenth:
             self.mode=self.INFINITE
         else:
             self.mode=self.FINITE
             self.lenth=lenth
         self.nameSet=nameSet
+        self.tracer=tracer
+        self.initState=None
+        if initState:
+
+            try:
+                self.checkState(initState)
+                self.initState = dict2statedict(initState)
+
+            except Exception as e:
+                raise e
+
+
+
+    def setTracer(self,tracer):
+        self.tracer=tracer
 
     def __iter__(self):
         return self
 
     def produce(self):
         res=self._produce()
+
         try:
             self.checkState(res)
         except Exception as e:
             raise e
-        return res
+        return dict2statedict(res)
 
 
     def _produce(self):
@@ -75,10 +91,8 @@ class InputMaker:
                 raise e
 
     def checkState(self,state):
-        if not isinstance(state,StatusDict):
-            raise TypeError("Wrong type (StatusDict type needed)")
-        if set(state.dict)!=set(self.nameSet):
-            raise Exception("Wrong states, "+ELExceptionString(self.nameSet,state.dict,"State"))
+
+        ELExceptionRaise(self.nameSet,state,"State")
 
 
 
@@ -90,36 +104,31 @@ class InputMaker:
 
 ##0.加速模型
 class AccelerateMaker(InputMaker):
-    def __init__(self,initState,lenth=None):
-        super(AccelerateMaker,self).__init__({"acceleratex","acceleratey","acceleratez"},lenth)
-        try:
-            self.checkState(initState)
-        except Exception as e:
-            raise e
-        self.initState =initState
-
+    def __init__(self,initState,lenth=None,tracer=None):
+        super(AccelerateMaker,self).__init__({"acceleratex","acceleratey","acceleratez"},initState,lenth,tracer)
+    def _produce(self):
+        raise NotImplementedError()
 
 
 
 ##1.无/常加速度模型
 class ConstantAccelerateMaker(AccelerateMaker):
-    def __init__(self,initState=None,lenth=None):
+    def __init__(self,initState=None,lenth=None,tracer=None):
         if not initState:
-            initState=dict2statedict({"acceleratex":0,"acceleratey":0,"acceleratez":0})
-        super(ConstantAccelerateMaker,self).__init__(initState,lenth)
+            initState={"acceleratex":0,"acceleratey":0,"acceleratez":0}
+        super(ConstantAccelerateMaker,self).__init__(initState,lenth,tracer)
     def _produce(self):
         return self.initState
 
 ##2.变加速度模型
 class VarAccelerateMaker(AccelerateMaker):
 
-    def __init__(self,scheduler,initState=None,lenth=None):
+    def __init__(self,scheduler,initState=None,lenth=None,tracer=None):
         """scheduler接受StateDict，或者dict为输入，并输出下一时刻的加速度"""
         if not initState:
             initState=dict2statedict({"acceleratex":0,"acceleratey":0,"acceleratez":0})
 
         def decorate(f,state):
-
             def ff():
                 nonlocal state
                 newState=f(state)
@@ -129,9 +138,7 @@ class VarAccelerateMaker(AccelerateMaker):
             return ff
 
         self.scheduler=decorate(scheduler,initState)
-        super(VarAccelerateMaker,self).__init__(initState,lenth)
-
-
+        super(VarAccelerateMaker,self).__init__(initState,lenth,tracer)
 
 
     def _produce(self):
@@ -142,38 +149,59 @@ class VarAccelerateMaker(AccelerateMaker):
 ##2.1圆心常加速度运动模型
 class NormalAccelerateMaker(VarAccelerateMaker):
 
-    def __init__(self,initVelocity,initState,interval,lenth=None):
-        def f(state):
-            axis=normalize(rotate90cc(self.currentVelocity.toNP()))
-            newState=state.norm()*axis
-            return dict2statedict({"acceleratex":newState[0],"acceleratey":newState[1],"acceleratez":newState[2]})
+    def __init__(self,initState,lenth=None,tracer=None):
 
 
-        self.currentVelocity=initVelocity
-        self.inertval=interval
-        super(NormalAccelerateMaker,self).__init__(f,initState,lenth)
+        super(NormalAccelerateMaker,self).__init__(self.f,initState,lenth,tracer)
 
 
     def _produce(self):
 
         res=super(NormalAccelerateMaker, self)._produce()
-        self.currentVelocity+=self.interval*res
         return res
+
+    def f(self,state):
+        axis = normalize(rotate90cc(self.tracer.getStateDict(-1,["velocityx","velocityy","velocityz"]).toNP()))
+        newState = state.norm() * axis
+        return dict2statedict({"acceleratex": newState[0], "acceleratey": newState[1], "acceleratez": newState[2]})
 
 
 ##2.2固定半径的圆周运动
 class CircleAccelerateMaker(NormalAccelerateMaker):
 
-    def __init__(self,initVelocity,raidus,interval,lenth=None):
+    def __init__(self,raidus,lenth=None,tracer=None):
         self.radius=raidus
-        initStateList=self.currentVelocity.norm()**2/raidus
+        initStateList=self.tracer.getStateDict(-1,["acceleratex","acceleratey","acceleratez"]).norm()**2/raidus
         initState=dict2statedict({"acceleratex": initStateList[0], "acceleratey": initStateList[1], "acceleratez": initStateList[2]})
 
-        super(CircleAccelerateMaker,self).__init__(initVelocity,initState,interval,lenth)
+        super(CircleAccelerateMaker,self).__init__(initState,lenth,tracer)
 
 
 
 
+#3.左转弯模型
+class VarAccelerateMaker(AccelerateMaker):
+
+    def __init__(self,scheduler,initState=None,lenth=None,tracer=None):
+        """scheduler接受StateDict，或者dict为输入，并输出下一时刻的加速度"""
+        if not initState:
+            initState=dict2statedict({"acceleratex":0,"acceleratey":0,"acceleratez":0})
+
+        def decorate(f,state):
+            def ff():
+                nonlocal state
+                newState=f(state)
+                yield state
+                state=newState
+
+            return ff
+
+        self.scheduler=decorate(scheduler,initState)
+        super(VarAccelerateMaker,self).__init__(initState,lenth,tracer)
+
+
+    def _produce(self):
+        return self.scheduler()
 
 
 

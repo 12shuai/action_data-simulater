@@ -1,6 +1,6 @@
 import csv
-from ..utils import create_writefile
-from ..status import Tracer
+
+from status import Tracer
 import matplotlib.pyplot as plt
 
 
@@ -34,20 +34,16 @@ class CSVHandler(Handler):
                 headers.append(name)
             return headers
 
-        try:
-            f_csv = csv.writer(create_writefile(self.path))
+        with open(self.path,"w") as f:
+            f_csv = csv.writer(f)
             if not self.header:
                 self.header = _getColNames(recorder.stateName)
-
+            f_csv.writerow(self.header)
             for state in recorder:
                 insert = []
                 for name in self.header:
                     insert.append(state[name])
                 f_csv.writerow(insert)
-        except Exception as e:
-            raise e
-        finally:
-            f_csv.close()
 
 
 
@@ -57,7 +53,7 @@ class PositionHandler(Handler):
     SAVE=1
     BOTH=2
 
-    def __init__(self,mode=DISPLAY,save_path=None):
+    def __init__(self,mode=DISPLAY,save_path=None,start_cfg="ro-",inter_cfg="bo-"):
         if mode>self.BOTH:
             raise Exception("mode should in [0,1,2], [DISPLAY,SAVE,BOTH]")
         self.mode=mode
@@ -66,24 +62,26 @@ class PositionHandler(Handler):
                 raise Exception("If you want to save figure, you should give the save_path")
             self.path=save_path
 
-        if mode!=self.SAVE:
-            self.fig=plt.figure()
-            self.ax=self.fig.gca(projection='3d')
+        self.startCfg = start_cfg
+        self.interCfg = inter_cfg
+
+        self.fig=plt.figure()
+        self.ax=self.fig.gca(projection='3d')
+
         super(PositionHandler, self).__init__()
 
 
     def _handle(self,recorder):
         for idx,state in enumerate(recorder):
-
             if idx == 0:
-                self.ax.plot(state["positionx"], state["positiony"], state["positionz"], 'ro-')
+                self.ax.plot(state["positionx"], state["positiony"], state["positionz"], self.startCfg)
             else:
-                self.ax.plot(state["positionx"], state["positiony"], state["positionz"])
+                self.ax.plot(state["positionx"], state["positiony"], state["positionz"],self.interCfg)
 
 
-            # ax.legend()
         if self.mode!=self.SAVE:
-            self.fig.show()
+            # self.fig.show()
+            plt.show()
         if self.mode!=self.DISPLAY:
             self.fig.savefig(self.path)
 
