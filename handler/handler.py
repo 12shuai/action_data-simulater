@@ -3,6 +3,10 @@ import csv
 from status import Tracer
 import matplotlib.pyplot as plt
 
+DISPLAY = 0
+SAVE = 1
+BOTH = 2
+
 
 class Handler:
 
@@ -47,43 +51,46 @@ class CSVHandler(Handler):
 
 
 
+class Image3DHandler(Handler):
 
-class PositionHandler(Handler):
-    DISPLAY=0
-    SAVE=1
-    BOTH=2
 
-    def __init__(self,mode=DISPLAY,save_path=None,start_cfg="ro-",inter_cfg="bo-"):
-        if mode>self.BOTH:
+    def __init__(self, mode=DISPLAY, save_path=None, start_cfg="ro-", inter_cfg="bo-"):
+        if mode > BOTH:
             raise Exception("mode should in [0,1,2], [DISPLAY,SAVE,BOTH]")
-        self.mode=mode
-        if mode!=self.DISPLAY:
+        self.mode = mode
+        if mode != DISPLAY:
             if not save_path:
                 raise Exception("If you want to save figure, you should give the save_path")
-            self.path=save_path
+            self.path = save_path
 
         self.startCfg = start_cfg
         self.interCfg = inter_cfg
 
+        super(Image3DHandler, self).__init__()
+
+
+    def handle(self,recorder):
+        self._resetFig()
+        super(Image3DHandler,self).handle(recorder)
+        if self.mode!=SAVE:
+            # self.fig.show()
+            plt.show()
+        if self.mode!=DISPLAY:
+            self.fig.savefig(self.path)
+
+    def set_save_path(self,path):
+        self.path=path
+
+
+    def _resetFig(self):
         self.fig=plt.figure()
         self.ax=self.fig.gca(projection='3d')
 
-        super(PositionHandler, self).__init__()
 
 
-    def _handle(self,recorder):
-        for idx,state in enumerate(recorder):
-            if idx == 0:
-                self.ax.plot(state["positionx"], state["positiony"], state["positionz"], self.startCfg)
-            else:
-                self.ax.plot(state["positionx"], state["positiony"], state["positionz"],self.interCfg)
 
 
-        if self.mode!=self.SAVE:
-            # self.fig.show()
-            plt.show()
-        if self.mode!=self.DISPLAY:
-            self.fig.savefig(self.path)
+
 
 
 

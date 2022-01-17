@@ -7,7 +7,7 @@
     >>> uniformScheduler.forward()
 """
 
-from status import PVStateTransferFunc,generatePV
+from status import PVStateTransferFunc,StatusDict
 from simulater import Simulater
 from inputmaker import *
 from  handler import PositionHandler,CSVHandler
@@ -287,8 +287,14 @@ class RandomLeftUpTurnScheduler(TurnScheduler):
 
 
 if __name__ == '__main__':
-    import doctest
-    doctest.testmod(verbose=True)
+    # import doctest
+    # doctest.testmod(verbose=True)
 
-
-
+    initState = StatusDict(
+        {"positionx": 500, "positiony": 400, "positionz": 0, "velocityx": 100, "velocityy": 100, "velocityz": 0})
+    interval = 0.02
+    lenth = 100
+    handlers = [PositionHandler()]
+    initAcc = 150
+    randomRightTurnScheduler = RandomRightTurnScheduler(initState, initAcc, interval, lenth, handlers)
+    randomRightTurnScheduler.forward()

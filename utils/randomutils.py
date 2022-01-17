@@ -1,9 +1,31 @@
 import random
 import math
-PI=math.pi
+from math import pi as PI
 
-def randomMinMax(min,max):
-    return random.random()*(max-min)+min
+MINI=-65535
+MAXI=65535
+
+def randomIntMinMax(min=None,max=None):
+    if min is None and max is None:
+        min,max=MINI,MAXI
+    elif min is None:
+        min=MINI
+    elif max is None:
+        max=MAXI
+    return random.randint(min,max)
+
+
+
+
+def randomMinMax(min=None,max=None):
+    if min is None and max is None:
+        min,max=MINI,MAXI
+    elif min is None:
+        min=MINI
+    elif max is None:
+        max=MAXI
+    return random.random() * (max - min) + min
+
 
 def randomLeft(angle):
     if 0<angle<PI/2 or PI/2<angle<PI:

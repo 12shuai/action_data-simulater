@@ -1,3 +1,4 @@
+import collections
 from collections import  OrderedDict
 import numpy as np
 import math
@@ -63,6 +64,7 @@ class StatusDict(OrderedDict):
         return self.dict.items()
 
     def keys(self):
+
         return self.dict.keys()
 
     def values(self):
@@ -94,6 +96,35 @@ class StatusDict(OrderedDict):
 
     def copy(self):
         return StatusDict(deepcopy(self.dict))
+
+    def zero(self):
+        res=self.copy()
+        for k,v in res.items():
+            res[k]=0
+        return res
+
+
+    def dot(self,other):
+        if not isinstance(other, StatusDict):
+
+            raise TypeError("Variable should be both StatusDict type..")
+        if len(self.dict) != len(other.dict):
+            raise TypeError("Variable's lenth should be the same.. ")
+
+        return np.dot(self.toNp(),other.toNp())
+
+    def getTheta(self,other):
+
+        try:
+            return math.acos(self.dot(other)/(self.norm()*other.norm())+0.001)
+        except:
+            return math.acos(0)
+
+
+    def fromNameList(self,list):
+        for k in list:
+            self[k]=0
+        return self
 
 
     def toList(self):
@@ -133,6 +164,15 @@ class StatusDict(OrderedDict):
 
         return math.sqrt(value)
 
+    def normVector(self):
+        value = 0
+        res=self.copy()
+        for k, v in self.items():
+            value += v ** 2
+        value= math.sqrt(value)
+        for k,v in res.items():
+            res[k]=v/value
+        return res
 
     def randomKey(self,*keys,min=None,max=None):
         if not keys:
@@ -172,13 +212,26 @@ def ELExceptionString(src,dst,name="Input"):
 
 def ELExceptionRaise(src,dst,name="Input"):
 
+
     if isinstance(src,StatusDict):
         src=statedict2dict(src)
     if isinstance(dst,StatusDict):
         dst=statedict2dict(dst)
-
     if set(src) != set(dst):
         raise Exception(ELExceptionString(src,dst,name))
+
+
+
+def EExceptionRaise(src,dst,name="Input"):
+
+
+    if isinstance(src,StatusDict):
+        src=statedict2dict(src)
+    if isinstance(dst,StatusDict):
+        dst=statedict2dict(dst)
+    _, extra = findEL(src, dst)
+    if extra:
+        raise Exception(f"{name}'s key space has extra keys:{extra}")
 
 
 def statedict2dict(dic):
@@ -204,75 +257,5 @@ def dict2statedict(dic):
         raise TypeError("Type should be dict(python) or StatusDict")
 
 
-def getNorm(state):
-    value=0
-    for k,v in state.items():
-        value+=v**2
-
-    return math.sqrt(value)
 
 
-
-def generatePV():
-    return StatusDict({"positionx":0,"positiony":0,"positionz":0,"velocityx":0,"velocity":0,"velocityz":0})
-
-
-
-def generateRandomPV():
-    return StatusDict({"positionx":0,"positiony":0,"positionz":0,"velocityx":0,"velocity":0,"velocityz":0}).randomKey()
-
-
-
-
-
-
-
-def _makeTracer(stateName):
-    res={}
-    for k in stateName:
-        res[k]=[]
-    return res
-
-class Tracer:
-    def __init__(self,stateName):
-        self.stateName=stateName
-        self.tracer=_makeTracer(stateName)
-        self.curr=0
-        self.lenth=0
-
-    def append(self,statusDict):
-        ELExceptionRaise(self.stateName,statusDict)
-
-        for k,v in statusDict.items():
-            self.tracer[k].append(v)
-        self.lenth+=1
-
-
-    def getStateDict(self,index,names=None):
-        res={}
-        if not names:
-            for k,v in self.tracer.items():
-                res[k]=self.tracer[k][index]
-        else:
-            if not isinstance(names,list):
-                raise TypeError("names should be list type")
-
-            for k in names:
-                res[k]=self.tracer[k][index]
-
-        return StatusDict(res)
-
-
-    def __iter__(self):
-        return self
-
-    def __next__(self):
-        if self.curr==self.lenth-1:
-            self.curr=0
-            raise StopIteration()
-        res=StatusDict()
-        for k,v in self.tracer.items():
-
-            res.append(Status(k,v[self.curr]))
-        self.curr+=1
-        return res
