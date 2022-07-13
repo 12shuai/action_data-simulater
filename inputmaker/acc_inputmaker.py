@@ -41,7 +41,6 @@ class AccelerateMaker(InputMaker):
         raise NotImplementedError()
 
 
-
 ##1.无/常加速度模型
 class ConstantAccelerateMaker(AccelerateMaker):
     def __init__(self,initState=None,lenth=None,tracer=None):
@@ -50,8 +49,6 @@ class ConstantAccelerateMaker(AccelerateMaker):
         super(ConstantAccelerateMaker,self).__init__(initState,lenth,tracer)
     def _produce(self):
         return self.initState
-
-
 
 
 ##2.变加速度模型
@@ -103,12 +100,11 @@ class StraightAccelerateMaker(VarAccelerateMaker):
         # vz=velocity["velocityz"]
         # if self.orient in [US,UAS,UNAS]:
 
-
-
         if state.norm()<=0.01:
             state=StatusDict({"acceleratex":velocity["velocityx"],
                              "acceleratey":velocity["velocityy"],
                             "acceleratez":velocity["velocityz"]})
+            
             state=state.normVector()*math.fabs(self.max*math.sqrt(3)*self.float)
 
         theta=velocity.getTheta(state)
@@ -133,15 +129,15 @@ class StraightAccelerateMaker(VarAccelerateMaker):
     def orientString(self):
         return "0:HS" \
                "1:US" \
-               "2.DS" \
-                "3.AS"\
-                "4.NAS"\
-                "5.HAS" \
-                "6.UAS" \
-               "7.DAS" \
-               "8.HNAS" \
-               "9.UNAS" \
-               "10.DNAS" \
+               "2:DS" \
+               "3:AS"\
+               "4:NAS"\
+               "5:HAS" \
+               "6:UAS" \
+               "7:DAS" \
+               "8:HNAS" \
+               "9:UNAS" \
+               "10:DNAS" \
             ##需要随机初始化
 
 ##2.2规定方向的拐弯模型
@@ -165,7 +161,7 @@ class OrientTurnAccelerateMaker(VarAccelerateMaker):
             if -self.max<=oldAZ<=0:
                 nextState["acceleratez"]=oldAZ+updateAZ
             elif 0<oldAZ<=self.max:
-                nextState["acceleratez"] = randomMinMax(max(0,oldAZ-updateAZ, min(self.max,oldAZ+updateAZ)))
+                nextState["acceleratez"] = randomMinMax(max(0,oldAZ-updateAZ), min(self.max,oldAZ+updateAZ))
 
         elif self.orient in [D,DL,DR]:
             if 0<= oldAZ <= self.max :
@@ -291,7 +287,7 @@ class OrientTurnAccelerateMaker(VarAccelerateMaker):
             tan = math.tan(angle)
             nextState["acceleratex"] = abs(math.sqrt((newAXYNorm ** 2 ) / (1 + tan ** 2))) * signX
             nextState["acceleratey"] = nextState["acceleratex"] * tan
-
+        
         return nextState
 
 
@@ -304,14 +300,39 @@ class OrientTurnAccelerateMaker(VarAccelerateMaker):
     def orientString(self):
         return "0:Left" \
                "1:Up" \
-               "2.Right" \
-               "3.Down" \
-               "4.UL" \
-               "5.DL" \
-               "6.UR" \
-               "7.DR"
+               "2:Right" \
+               "3:Down" \
+               "4:UL" \
+               "5:DL" \
+               "6:UR" \
+               "7:DR"
 
+class CONSTAccelerateMaker(VarAccelerateMaker):
+    def __init__(self,orient,max,float=0.1,initState=None,lenth=None,tracer=None):
+        """scheduler接受StateDict，或者dict为输入，并输出下一时刻的加速度"""
+        self._checkOrient(orient)
+        self.orient=orient
+        self.max = max
+        self.float=float
+        super(CONSTAccelerateMaker,self).__init__(initState,lenth,tracer)
 
+    def _scheduler(self,state):
+        initStatus=self.tracer[-1]
+        nextState=state.zero()
+
+        nextState["acceleratez"] = 0
+        nextState["acceleratex"] = 0
+        nextState["acceleratey"] = 0
+
+        return nextState
+
+    def _checkOrient(self,orient):
+        if orient<0 or orient>7:
+            raise Exception("The orient should be in [0,7]\n"+self.orientString())
+
+    def orientString(self):
+        return "0:CONSTSTRAIGHT" \
+               
 ##2.1圆心常加速度运动模型
 # class NormalAccelerateMaker(VarAccelerateMaker):
 #

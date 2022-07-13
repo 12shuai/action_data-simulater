@@ -1,5 +1,6 @@
 from .state import Status,StatusDict
 from utils import randomMinMax
+import math
 MINI=-65535
 MAXI=65535
 
@@ -24,9 +25,17 @@ class Condition:
 
 
     def correct(self,state):
-        res = state.copy()
+        res = state
         for k, v in self.scopes.items():
             min, max = v
+            '''if k in ["velocityx","velocityy"] :
+                if min <=  res[k] <= max :
+                    continue 
+                elif res[k] < min:
+                    res[k] = res[k]*math.sqrt( min ** 2 + min ** 2)/math.sqrt( res["velocityx"] ** 2 + res["velocityy"] ** 2)
+                else :
+                    res[k] = res[k]*math.sqrt( max ** 2 + max ** 2)/math.sqrt( res["velocityx"] ** 2 + res["velocityy"] ** 2)
+            else:'''
             if min<=res[k]<=max:
                 continue
             elif res[k]<min:

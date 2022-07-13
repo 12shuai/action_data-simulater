@@ -1,7 +1,6 @@
 from utils import randomIntMinMax,randomMinMax
 from status import StatusDict,Status,Condition
 
-
 # Stteing应该可以读文件
 class Setting:
     def __init__(self,opt,sample_lenth):
@@ -24,12 +23,12 @@ class Setting:
             for k, v in self.opt.items():
                 re=[]
                 for item in v:
-                    if len(item) == 3:
+                    if len(item) == 4:
                         re.append(item[-1])
-                    elif len(item) == 2:
+                    elif len(item) == 3:
                         re.append(self.saLen)
                     else:
-                        raise Exception()
+                        raise Exception("The lenth of lnput list is wrong(3 or 4)")
                 res.append(re)
 
         except Exception:
@@ -41,7 +40,7 @@ class Setting:
 
     def produce(self):
         """
-        [condition字典，[inputMaker类名，参数字典],[handler列表]]
+        [condition字典,[inputMaker类名,参数字典],[handler列表]]
         :return:
         """
         if self.curNum>=self.scheduler_list[self.curIndex][self.curSubIndex]:
@@ -55,11 +54,14 @@ class Setting:
             raise StopIteration()
 
         opt= self.opt[self.keys[self.curIndex]]
-        inputMaker,handlers = opt[self.curSubIndex]
+        condition,inputMaker,handlers = opt[self.curSubIndex]
+        condition=Condition(condition).randomState()
 
         self.curNum+=1
 
-        return inputMaker[0](**(inputMaker[1])),handlers
+        return condition,inputMaker[0](**(inputMaker[1])),handlers
+        #return condition,inputMaker[0](**(inputMaker[1])),inputMaker[2](**(inputMaker[3])),handlers
+        # return condition,inputMaker[0](**(inputMaker[1])),inputMaker[2](**(inputMaker[3])),inputMaker[4](**(inputMaker[5])),inputMaker[6](**(inputMaker[7])),handlers
 
 
 
@@ -70,14 +72,13 @@ class Setting:
 
 
 class Environment:
-    def __init__(self,condition,setting,lenth):
+    def __init__(self,setting,lenth):
         """
 
         :param condition: 字典对象，表示各个状态的范围
         :param setting:字典对象，用于将字符串或者简写表示映射为对应的输入对象
         :param lenth:用于表示每种input（InputMapper中）采样的个数
         """
-        self.condtion=Condition(condition)
         self.setting=Setting(setting,lenth)
         self.lenth=lenth
 
@@ -87,12 +88,17 @@ class Environment:
 
     def __next__(self):
         try:
-            initState=self.condtion.randomState()
-            inputMaker, handler = self.setting.produce()
-            return initState,inputMaker,handler
+            initState, inputMaker, handler = self.setting.produce()
+            #initState,inputMaker1,inputMaker2, handler = self.setting.produce()
+            # initState,inputMaker1,inputMaker2,inputMaker3,inputMaker4, handler = self.setting.produce()
+            return initState, inputMaker, handler
+            #return initState,inputMaker1,inputMaker2,handler 
+            # return initState,inputMaker1,inputMaker2,inputMaker3,inputMaker4,handler
 
         except StopIteration as e:
             raise e
 
-        except Exception:
-            raise Exception("Scheduler is stopped by error")
+        except Exception as e:
+            raise e
+
+

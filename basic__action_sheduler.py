@@ -99,7 +99,7 @@ class RandomUpUniformScheduler(UniformScheduler):
 
         initStatus["velocityy"]=0
         initStatus["velocityz"]=0
-        initStatus.randomKey("velocityz",min=0,max=initVelocity)
+        initStatus.randomKey("velocityz",min=0,max=initVelocity/10)
         remain=math.sqrt(initVelocity**2-initStatus["velocityz"]**2)
         initStatus.randomKey("velocityy",min=-remain,max=remain)
         initStatus["velocityx"] = math.sqrt(remain**2-initStatus["velocityy"]**2)
@@ -121,7 +121,7 @@ class RandomDownUniformScheduler(UniformScheduler):
 
         initStatus["velocityy"]=0
         initStatus["velocityz"]=0
-        initStatus.randomKey("velocityz",min=-initVelocity,max=0)
+        initStatus.randomKey("velocityz",min=-initVelocity/10,max=0)
         remain=math.sqrt(initVelocity**2-initStatus["velocityz"]**2)
         initStatus.randomKey("velocityy",min=-remain,max=remain)
         initStatus["velocityx"] = math.sqrt(remain**2-initStatus["velocityy"]**2)

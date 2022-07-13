@@ -10,9 +10,15 @@ class PositionHandler(Image3DHandler):
         for idx,state in enumerate(recorder):
             if idx == 0:
                 self.ax.plot(state["positionx"], state["positiony"], state["positionz"], self.startCfg)
+                self.ax.set_xlabel('x(m)')
+                self.ax.set_ylabel('y(m)')
+                self.ax.set_zlabel('z(m)')
             else:
 
                 self.ax.plot(state["positionx"], state["positiony"], state["positionz"],self.interCfg)
+                self.ax.set_xlabel('x(m)')
+                self.ax.set_ylabel('y(m)')
+                self.ax.set_zlabel('z(m)')
 
 
 
@@ -24,7 +30,6 @@ class DirCSVPositionHandler(Handler):
         self.imageDir = image_name
         self.image_suffix=image_suffix if image_suffix[0]=="." else "."+image_suffix
         self.csvDir=csv_name
-        self._create_dict()
 
 
         self.imageOpt={
@@ -34,6 +39,7 @@ class DirCSVPositionHandler(Handler):
         }
 
     def _handle(self,recorder):
+        self._create_dict()
         prefix=self._get_file_name()
 
         csvHanlder=CSVHandler(os.path.join(self.dir,self.csvDir,prefix+".csv"))
